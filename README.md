@@ -32,7 +32,7 @@ Before you begin, you need to have the following installed on your system:
 1.  **Clone the repository:**
     ```bash
     git clone [https://github.com/carter-a-lim/Video-Srt-Generator.git](https://github.com/carter-a-lim/Video-Srt-Generator.git)
-    cd your-repo-name
+    cd Video-Srt-Generator
     ```
 
 2.  **Install the required Python packages:**
