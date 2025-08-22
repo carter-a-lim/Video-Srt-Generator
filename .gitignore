@@ -22,3 +22,8 @@ Thumbs.db
 # Project-specific ignores
 *_temp_audio.mp3
 *.srt
+
+# PyInstaller build artifacts
+dist/
+build/
+*.spec

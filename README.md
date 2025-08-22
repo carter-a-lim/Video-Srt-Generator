@@ -2,6 +2,14 @@
 
 A user-friendly desktop application to automatically generate and format `.srt` subtitle files from any video. Built with Python and faster-whisper.
 
+## Download (Easy Installation)
+
+For a simple, one-click experience, download the latest version from the **[Releases Page](https://github.com/carter-a-lim/Video-Srt-Generator.git)**.
+
+Just download the `.zip` file, extract the executable, and run it.
+
+**Note:** You still need to have [FFmpeg](https://ffmpeg.org/download.html) installed on your system for the application to work.
+
 ![Screenshot of the App](https://github.com/user-attachments/assets/ca61d81e-bd27-4fe3-b6ad-f547e9cca445)
 
 ## Features
