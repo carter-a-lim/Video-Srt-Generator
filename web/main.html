@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caption Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Auto-Caption Generator</h1>
+        <p>Create perfectly formatted SRT subtitle files for your videos.</p>
+
+        <div class="form-group">
+            <label>1. Select Video File</label>
+            <div class="file-picker">
+                <button id="select-file-btn">Choose File</button>
+                <span id="file-name-display">No file selected...</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="model-select">2. Choose Model Quality</label>
+            <select id="model-select">
+                <option value="tiny">Tiny (Fastest, Lowest Quality)</option>
+                <option value="base">Base</option>
+                <option value="small" selected>Small (Good Balance)</option>
+                <option value="medium">Medium</option>
+                <option value="large-v3">Large (Slowest, Highest Quality)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="language-select">3. Select Audio Language</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="ja">Japanese</option>
+                <option value="auto">Auto-Detect</option>
+            </select>
+        </div>
+        
+        <fieldset class="form-group">
+            <legend>4. Choose Line Splitting Method</legend>
+            <div class="radio-group">
+                <label><input type="radio" name="split-mode" value="words"> Words per Line</label>
+                <label><input type="radio" name="split-mode" value="chars" checked> Characters per Line</label>
+            </div>
+            <div id="words-container" class="hidden">
+                <label for="words-input">Max Words:</label>
+                <input type="number" id="words-input" value="3" min="1" max="10">
+            </div>
+            <div id="chars-container">
+                <label for="chars-input">Max Characters:</label>
+                <input type="number" id="chars-input" value="17" min="10" max="100">
+            </div>
+        </fieldset>
+
+        <button id="start-btn" disabled>Generate Captions</button>
+
+        <div class="status-area">
+            <h2>Progress Log</h2>
+            <div id="status-log">
+                Welcome! Select a file and click "Generate Captions" to begin.
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="/eel.js"></script>
+    <script type="text/javascript" src="script.js"></script>
+</body>
+</html>
