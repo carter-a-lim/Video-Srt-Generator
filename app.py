@@ -7,6 +7,12 @@ from datetime import timedelta
 from faster_whisper import WhisperModel
 import tkinter as tk
 from tkinter import filedialog
+# NEW: Import spaCy if it's going to be used
+try:
+    import spacy
+except ImportError:
+    spacy = None
+
 
 # Initialize Eel and point it to the 'web' folder
 eel.init('web')
@@ -24,79 +30,113 @@ def select_file():
     )
     return file_path
 
-def format_and_save_srt(segments, output_path, split_mode, split_value):
+def format_and_save_srt(segments, output_path, split_mode, split_value, use_continuous, use_nlp, nlp_doc):
     """
-    A more advanced function to format subtitles. It splits lines based on
-    word/character limits and respects sentence boundaries.
+    The ultimate, advanced function to format subtitles with professional-grade logic.
     """
-    all_words = [word for segment in segments for word in segment.words]
-    if not all_words:
+    # --- Part 1: Pre-process words and identify NLP break points ---
+    clean_words = [{'text': w.word.strip().rstrip('-'), 'start': w.start, 'end': w.end} for segment in segments for w in segment.words]
+    if not clean_words:
         raise ValueError("Transcription failed to produce any words.")
 
-    # Punctuation that indicates a sentence end
-    sentence_enders = ('.', '?', '!')
+    # Get preferred break points from NLP if enabled
+    nlp_break_points = set()
+    if use_nlp and nlp_doc:
+        # Find the word index for the end of each noun chunk
+        char_to_word_map = {}
+        char_count = 0
+        for i, word in enumerate(clean_words):
+            for _ in range(len(word['text'])):
+                char_to_word_map[char_count] = i
+                char_count += 1
+            char_count += 1 # Account for space
+        
+        for chunk in nlp_doc.noun_chunks:
+            end_word_index = char_to_word_map.get(chunk.end_char -1)
+            if end_word_index:
+                nlp_break_points.add(end_word_index)
 
+    break_enders = ('.', '?', '!', ',')
+
+    # --- Part 2: Build subtitle lines with advanced logic ---
     new_subs = []
     current_line_words = []
-
-    for i, word in enumerate(all_words):
+    for i, word in enumerate(clean_words):
         current_line_words.append(word)
-        
-        # --- Strip each word before joining to calculate length ---
-        line_text = ' '.join(w.word.strip() for w in current_line_words)
+        line_text = ' '.join(w['text'] for w in current_line_words)
 
-        # --- Check conditions to finalize the current line ---
         finalize_line = False
+        is_manual_break = False
 
-        # 1. Split by word count
-        if split_mode == 'words' and len(current_line_words) >= split_value:
+        # --- Check all conditions to finalize the current line ---
+        # 1. NLP break point (highest priority)
+        if use_nlp and i in nlp_break_points:
             finalize_line = True
+            is_manual_break = True
         
-        # 2. Split by character count
-        elif split_mode == 'chars':
-            if len(line_text) >= split_value and len(current_line_words) > 1:
-                last_word = current_line_words.pop()
+        # 2. Punctuation break point
+        cleaned_word_text = word['text'].strip().rstrip(')"\'')
+        if cleaned_word_text.endswith(break_enders):
+            finalize_line = True
+            is_manual_break = True
+        
+        # 3. Length limits (word or character count)
+        if not is_manual_break: # Only check length if not already broken by punctuation/NLP
+            if split_mode == 'words' and len(current_line_words) >= split_value:
                 finalize_line = True
-                all_words.insert(i + 1, last_word)
-
-        # 3. Check for sentence end
-        cleaned_word = word.word.strip().rstrip(')"\'')
-        if cleaned_word.endswith(sentence_enders):
+            elif split_mode == 'chars' and len(line_text) >= split_value:
+                finalize_line = True
+        
+        # 4. Orphan control (lookahead logic)
+        if finalize_line and not is_manual_break and (i + 1) < len(clean_words):
+            next_word = clean_words[i+1]
+            # If the next word is short and would be alone on a line, pull it back
+            if len(next_word['text']) <= 3 and (i + 2 == len(clean_words) or clean_words[i+2]['text'].endswith(break_enders)):
+                current_line_words.append(next_word)
+                i += 1 # Manually advance the loop
+        
+        # 5. End of transcript
+        if i == len(clean_words) - 1:
             finalize_line = True
-            
-        # 4. Check if it's the last word of the entire transcription
-        if i == len(all_words) - 1:
-            finalize_line = True
 
-        # --- Create the subtitle if any condition was met ---
+        # --- Finalize the line if any condition was met ---
         if finalize_line and current_line_words:
-            start_time = timedelta(seconds=current_line_words[0].start)
-            end_time = timedelta(seconds=current_line_words[-1].end)
-            
-            # --- FIX HERE: Strip each word before joining for the final content ---
-            final_content = ' '.join(w.word.strip() for w in current_line_words)
+            start_time = timedelta(seconds=current_line_words[0]['start'])
+            end_time = timedelta(seconds=current_line_words[-1]['end'])
+            final_content = ' '.join(w['text'] for w in current_line_words)
             
             new_subs.append(srt.Subtitle(
-                index=len(new_subs) + 1,
-                start=start_time,
-                end=end_time,
-                content=final_content
+                index=len(new_subs) + 1, start=start_time, end=end_time, content=final_content
             ))
-            # Reset for the next line
             current_line_words = []
+
+    # --- Part 3: Post-process for minimum display time ---
+    min_duration = timedelta(seconds=1.2)
+    for sub in new_subs:
+        duration = sub.end - sub.start
+        if duration < min_duration:
+            sub.end = sub.start + min_duration
+
+    # --- Part 4: Post-process for gap filling (conditional) ---
+    if len(new_subs) > 1:
+        if use_continuous: # Always-on style
+            for i in range(len(new_subs) - 1):
+                new_subs[i].end = new_subs[i+1].start
+        else: # Pause-sensitive style
+            max_gap_to_fill = timedelta(seconds=1.5)
+            for i in range(len(new_subs) - 1):
+                gap = new_subs[i+1].start - new_subs[i].end
+                if gap < max_gap_to_fill:
+                    new_subs[i].end = new_subs[i+1].start
 
     # Save the composed SRT file
     srt_content = srt.compose(new_subs)
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(srt_content)
 
-
 # --- The main processing logic, exposed to JavaScript ---
 @eel.expose
-def start_processing(video_path, model_size, language, split_mode, split_value_str):
-    """
-    Main function to orchestrate the process.
-    """
+def start_processing(video_path, model_size, language, split_mode, split_value_str, use_continuous, use_nlp):
     def update_status(message):
         print(message)
         eel.update_status(message)
@@ -109,27 +149,58 @@ def start_processing(video_path, model_size, language, split_mode, split_value_s
     try:
         split_value = int(split_value_str)
 
-        # 1. Extract Audio
-        update_status(f"Step 1/4: Extracting audio from '{os.path.basename(video_path)}'...")
+        update_status("Step 1/5: Extracting audio...")
         command = ['ffmpeg', '-i', video_path, '-vn', '-c:a', 'mp3', '-ab', '192k', '-y', temp_audio_file]
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         update_status("Audio extracted successfully.")
 
-        # 2. Transcribe Audio
-        update_status(f"Step 2/4: Loading Whisper model '{model_size}'...")
+        update_status(f"Step 2/5: Loading Whisper model '{model_size}'...")
         model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        update_status("Model loaded. Starting transcription... (This may take a long time)")
+        update_status("Model loaded. Starting transcription...")
         segments, _ = model.transcribe(temp_audio_file, language=language, word_timestamps=True)
         segments = list(segments)
         update_status("Transcription complete.")
 
-        # 3. Format SRT
-        update_status(f"Step 3/4: Formatting subtitles (by {split_mode}, max {split_value})...")
-        format_and_save_srt(segments, output_srt_file, split_mode, split_value)
+        nlp_doc = None
+        if use_nlp:
+            update_status("Step 3/5: Performing NLP analysis (this may be slow)...")
+            if spacy is None:
+                update_status("spaCy not available - skipping NLP analysis")
+                use_nlp = False  # Disable NLP for this run
+            else:
+                try:
+                    nlp = spacy.load("en_core_web_sm")
+                    full_text = ' '.join(w.word.strip() for seg in segments for w in seg.words)
+                    nlp_doc = nlp(full_text)
+                    update_status("NLP analysis complete.")
+                except OSError as e:
+                    update_status(f"spaCy model not found - downloading automatically...")
+                    try:
+                        # Try to download the model automatically
+                        import subprocess
+                        result = subprocess.run([
+                            sys.executable, "-m", "spacy", "download", "en_core_web_sm"
+                        ], capture_output=True, text=True, timeout=300)  # 5 minute timeout
+                        
+                        if result.returncode == 0:
+                            nlp = spacy.load("en_core_web_sm")
+                            full_text = ' '.join(w.word.strip() for seg in segments for w in seg.words)
+                            nlp_doc = nlp(full_text)
+                            update_status("NLP analysis complete.")
+                        else:
+                            update_status(f"Failed to download spaCy model: {result.stderr}")
+                            use_nlp = False
+                    except (subprocess.TimeoutExpired, subprocess.SubprocessError) as download_error:
+                        update_status(f"Failed to download spaCy model: {str(download_error)}")
+                        use_nlp = False
+        else:
+            update_status("Step 3/5: Skipping NLP analysis.")
+
+        update_status("Step 4/5: Formatting subtitles with advanced logic...")
+        format_and_save_srt(segments, output_srt_file, split_mode, split_value, use_continuous, use_nlp, nlp_doc)
         update_status(f"Formatted SRT file saved as '{os.path.basename(output_srt_file)}'")
         
-        # 4. Cleanup
-        update_status("Step 4/4: Cleaning up temporary files...")
+        update_status("Step 5/5: Cleaning up temporary files...")
         os.remove(temp_audio_file)
         update_status(f"Process complete! Your caption file is ready.")
         eel.process_finished(True, f"Success! Saved to {output_srt_file}")
@@ -143,5 +214,5 @@ def start_processing(video_path, model_size, language, split_mode, split_value_s
 
 # Start the Eel application
 print("Starting GUI... Close this window to exit.")
-eel.start('main.html', size=(700, 850))
+eel.start('main.html', size=(700, 900))
 print("GUI closed.")

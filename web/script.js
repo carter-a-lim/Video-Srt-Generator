@@ -8,13 +8,15 @@ const modelSelect = document.getElementById('model-select');
 const languageSelect = document.getElementById('language-select');
 const startBtn = document.getElementById('start-btn');
 const statusLog = document.getElementById('status-log');
-
-// New elements for splitting method
 const splitModeRadios = document.querySelectorAll('input[name="split-mode"]');
 const wordsContainer = document.getElementById('words-container');
 const charsContainer = document.getElementById('chars-container');
 const wordsInput = document.getElementById('words-input');
 const charsInput = document.getElementById('chars-input');
+
+// New advanced options checkboxes
+const continuousCaptionsCheck = document.getElementById('continuous-captions-check');
+const nlpCheck = document.getElementById('nlp-check');
 
 
 // --- Event listener for the file selection button ---
@@ -54,16 +56,16 @@ startBtn.addEventListener('click', () => {
     startBtn.textContent = "Processing...";
     statusLog.innerHTML = "";
 
-    // Get common settings
+    // Get all settings from the form
     const modelSize = modelSelect.value;
     const language = languageSelect.value;
-    
-    // Get split settings based on which radio is selected
     const splitMode = document.querySelector('input[name="split-mode"]:checked').value;
     const splitValue = splitMode === 'words' ? wordsInput.value : charsInput.value;
+    const useContinuous = continuousCaptionsCheck.checked;
+    const useNlp = nlpCheck.checked;
     
-    // Call the main Python processing function with new arguments
-    eel.start_processing(selectedVideoPath, modelSize, language, splitMode, splitValue);
+    // Call the main Python processing function with all new arguments
+    eel.start_processing(selectedVideoPath, modelSize, language, splitMode, splitValue, useContinuous, useNlp);
 });
 
 

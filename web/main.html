@@ -54,7 +54,19 @@
             </div>
             <div id="chars-container">
                 <label for="chars-input">Max Characters:</label>
-                <input type="number" id="chars-input" value="17" min="10" max="100">
+                <input type="number" id="chars-input" value="15" min="10" max="100">
+            </div>
+        </fieldset>
+
+        <fieldset class="form-group">
+            <legend>5. Advanced Flow Control</legend>
+            <div class="checkbox-group">
+                <label title="Fills all gaps between subtitles for a continuous, always-on style. If unchecked, longer pauses in speech will be respected.">
+                    <input type="checkbox" id="continuous-captions-check" checked> Continuous (No-Gap) Captions
+                </label>
+                <label title="Uses grammatical analysis to create more natural line breaks. Slower process, but results in higher quality captions.">
+                    <input type="checkbox" id="nlp-check"> Use Advanced NLP Analysis (Slower)
+                </label>
             </div>
         </fieldset>
 
