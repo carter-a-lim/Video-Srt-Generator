@@ -165,34 +165,15 @@ def start_processing(video_path, model_size, language, split_mode, split_value_s
         if use_nlp:
             update_status("Step 3/5: Performing NLP analysis (this may be slow)...")
             if spacy is None:
-                update_status("spaCy not available - skipping NLP analysis")
-                use_nlp = False  # Disable NLP for this run
-            else:
-                try:
-                    nlp = spacy.load("en_core_web_sm")
-                    full_text = ' '.join(w.word.strip() for seg in segments for w in seg.words)
-                    nlp_doc = nlp(full_text)
-                    update_status("NLP analysis complete.")
-                except OSError as e:
-                    update_status(f"spaCy model not found - downloading automatically...")
-                    try:
-                        # Try to download the model automatically
-                        import subprocess
-                        result = subprocess.run([
-                            sys.executable, "-m", "spacy", "download", "en_core_web_sm"
-                        ], capture_output=True, text=True, timeout=300)  # 5 minute timeout
-                        
-                        if result.returncode == 0:
-                            nlp = spacy.load("en_core_web_sm")
-                            full_text = ' '.join(w.word.strip() for seg in segments for w in seg.words)
-                            nlp_doc = nlp(full_text)
-                            update_status("NLP analysis complete.")
-                        else:
-                            update_status(f"Failed to download spaCy model: {result.stderr}")
-                            use_nlp = False
-                    except (subprocess.TimeoutExpired, subprocess.SubprocessError) as download_error:
-                        update_status(f"Failed to download spaCy model: {str(download_error)}")
-                        use_nlp = False
+                raise ImportError("spaCy is not installed. Please run 'pip install spacy'.")
+            try:
+                nlp = spacy.load("en_core_web_sm")
+            except OSError:
+                raise OSError("spaCy model 'en_core_web_sm' not found. Please run 'python -m spacy download en_core_web_sm'.")
+            
+            full_text = ' '.join(w.word.strip() for seg in segments for w in seg.words)
+            nlp_doc = nlp(full_text)
+            update_status("NLP analysis complete.")
         else:
             update_status("Step 3/5: Skipping NLP analysis.")
 

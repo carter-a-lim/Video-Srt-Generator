@@ -2,11 +2,18 @@
 
 A user-friendly desktop application to automatically generate and format `.srt` subtitle files from any video. Built with Python and faster-whisper.
 
-## Download (Easy Installation)
 
-For a simple, one-click experience, download the latest version from the **[Releases Page](https://github.com/carter-a-lim/Video-Srt-Generator.git)**.
+## Version 2.0.0 - The Professional Flow Update! 🎉
 
-Just download the `.zip` file, extract the executable, and run it.
+This is a major upgrade that introduces several advanced features for creating more natural, professional-grade captions.
+
+**New Features:**
+- ✨ **Advanced NLP Analysis:** A new option to use grammatical analysis (`spaCy`) for the most intelligent and natural line breaks possible.
+- 🧠 **Orphan Word Prevention:** The formatting logic now avoids leaving single, short words on a line, improving readability.
+- ⏱️ **Minimum Display Time:** Captions are now guaranteed to be on-screen long enough to be read, preventing jarring "flashes" of text.
+- ⏯️ **Pause-Sensitive Captions:** A new option to disable "always-on" captions, which respects long, dramatic pauses in speech.
+- 🐛 **Bug Fixes:** General improvements to the formatting engine.
+
 
 **Note:** You still need to have [FFmpeg](https://ffmpeg.org/download.html) installed on your system for the application to work.
 
